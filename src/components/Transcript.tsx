@@ -8,7 +8,7 @@ interface Props {
     filename: string;
 }
 
-export default function Transcript({ transcribedData }: Props) {
+export default function Transcript({ transcribedData, filename }: Props) {
     const divRef = useRef<HTMLDivElement>(null);
 
     const saveBlob = (blob: Blob, filename: string) => {
