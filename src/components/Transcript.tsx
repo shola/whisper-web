@@ -22,9 +22,11 @@ export default function Transcript({ transcribedData, filename }: Props) {
     const exportTXT = () => {
         let chunks = transcribedData?.chunks ?? [];
         let text = chunks
-            .map((chunk) => chunk.text)
-            .join("")
-            .trim();
+            .map(
+                ({ timestamp, text }) =>
+                    `[${formatAudioTimestamp(timestamp[0])}] ${text}`,
+            )
+            .join("\n");
 
         const blob = new Blob([text], { type: "text/plain" });
         saveBlob(blob, filename + ".txt");
