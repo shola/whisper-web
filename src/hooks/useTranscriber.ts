@@ -33,12 +33,13 @@ export interface TranscriberData {
 }
 
 export interface Transcriber {
-    onInputChange: () => void;
+    onInputChange: (newFilename: string) => void;
     isBusy: boolean;
     isModelLoading: boolean;
     progressItems: ProgressItem[];
     start: (audioData: AudioBuffer | undefined) => void;
     output?: TranscriberData;
+    filename: string;
     model: string;
     setModel: (model: string) => void;
     multilingual: boolean;
@@ -59,6 +60,7 @@ export function useTranscriber(): Transcriber {
     const [isModelLoading, setIsModelLoading] = useState(false);
 
     const [progressItems, setProgressItems] = useState<ProgressItem[]>([]);
+    const [filename, setFilename] = useState<string>("");
 
     const webWorker = useWorker((event) => {
         const message = event.data;
@@ -138,10 +140,13 @@ export function useTranscriber(): Transcriber {
         Constants.DEFAULT_LANGUAGE,
     );
 
-    const onInputChange = useCallback(() => {
+    const onInputChange = useCallback((newFilename: string) => {
+        setFilename(newFilename);
         setTranscript(undefined);
     }, []);
 
+    // TODO: see if this will work with a MediaElementAudioSourceNode instead
+    // of AudioBuffer
     const postRequest = useCallback(
         async (audioData: AudioBuffer | undefined) => {
             if (audioData) {
@@ -157,7 +162,7 @@ export function useTranscriber(): Transcriber {
 
                     audio = new Float32Array(left.length);
                     for (let i = 0; i < audioData.length; ++i) {
-                        audio[i] = SCALING_FACTOR * (left[i] + right[i]) / 2;
+                        audio[i] = (SCALING_FACTOR * (left[i] + right[i])) / 2;
                     }
                 } else {
                     // If the audio is not stereo, we can just use the first channel:
@@ -186,6 +191,7 @@ export function useTranscriber(): Transcriber {
             progressItems,
             start: postRequest,
             output: transcript,
+            filename,
             model,
             setModel,
             multilingual,
@@ -203,6 +209,7 @@ export function useTranscriber(): Transcriber {
         progressItems,
         postRequest,
         transcript,
+        filename,
         model,
         multilingual,
         quantized,

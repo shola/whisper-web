@@ -5,6 +5,7 @@ import { formatAudioTimestamp } from "../utils/AudioUtils";
 
 interface Props {
     transcribedData: TranscriberData | undefined;
+    filename: string;
 }
 
 export default function Transcript({ transcribedData }: Props) {
@@ -26,7 +27,7 @@ export default function Transcript({ transcribedData }: Props) {
             .trim();
 
         const blob = new Blob([text], { type: "text/plain" });
-        saveBlob(blob, "transcript.txt");
+        saveBlob(blob, filename + ".txt");
     };
     const exportJSON = () => {
         let jsonData = JSON.stringify(transcribedData?.chunks ?? [], null, 2);
@@ -36,7 +37,7 @@ export default function Transcript({ transcribedData }: Props) {
         jsonData = jsonData.replace(regex, "$1[$2 $3]");
 
         const blob = new Blob([jsonData], { type: "application/json" });
-        saveBlob(blob, "transcript.json");
+        saveBlob(blob, filename + ".json");
     };
 
     // Scroll to the bottom when the component updates

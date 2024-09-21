@@ -129,6 +129,16 @@ export enum AudioSource {
     RECORDING = "RECORDING",
 }
 
+/**
+ * OPTIMIZATION: It's recommended to create one AudioContext and reuse it instead
+ * of initializing a new one each time, and it's OK to use a single
+ * AudioContext for several different audio sources and pipeline concurrently
+ * (https://developer.mozilla.org/en-US/docs/Web/API/AudioContext).
+ */
+const audioCTX = new AudioContext({
+    sampleRate: Constants.SAMPLING_RATE,
+});
+
 export function AudioManager(props: { transcriber: Transcriber }) {
     const [progress, setProgress] = useState<number | undefined>(undefined);
     const [audioData, setAudioData] = useState<
@@ -155,12 +165,22 @@ export function AudioManager(props: { transcriber: Transcriber }) {
         data: ArrayBuffer,
         mimeType: string,
     ) => {
-        const audioCTX = new AudioContext({
-            sampleRate: Constants.SAMPLING_RATE,
-        });
+        // This will be a string URL that points to the data with a GUID in the path
         const blobUrl = URL.createObjectURL(
             new Blob([data], { type: "audio/*" }),
         );
+
+        /**
+         * AudioBuffers are designed to hold small audio snippets, typically
+         * less than 45 s. For longer sounds, objects implementing the
+         * MediaElementAudioSourceNode are more suitable. The buffer contains
+         * the audio signal waveform encoded as a series of amplitudes in the
+         * following format: non-interleaved IEEE754 32-bit linear PCM with a
+         * nominal range between -1 and +1, that is, a 32-bit floating point
+         * buffer, with each sample between -1.0 and 1.0. If the AudioBuffer
+         * has multiple channels, they are stored in separate buffers.
+         * https://developer.mozilla.org/en-US/docs/Web/API/AudioBuffer
+         */
         const decoded = await audioCTX.decodeAudioData(data);
         setAudioData({
             buffer: decoded,
@@ -179,9 +199,6 @@ export function AudioManager(props: { transcriber: Transcriber }) {
             setProgress(event.loaded / event.total || 0);
         };
         fileReader.onloadend = async () => {
-            const audioCTX = new AudioContext({
-                sampleRate: Constants.SAMPLING_RATE,
-            });
             const arrayBuffer = fileReader.result as ArrayBuffer;
             const decoded = await audioCTX.decodeAudioData(arrayBuffer);
             setProgress(undefined);
@@ -244,17 +261,25 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                     <UrlTile
                         icon={<AnchorIcon />}
                         text={"From URL"}
-                        onUrlUpdate={(e) => {
-                            props.transcriber.onInputChange();
-                            setAudioDownloadUrl(e);
+                        onUrlUpdate={(url) => {
+                            const filename =
+                                url.split("/").at(-1) ||
+                                `url_upload_${new Date().toISOString()}`;
+                            props.transcriber.onInputChange(filename);
+                            setAudioDownloadUrl(url);
                         }}
                     />
                     <VerticalBar />
                     <FileTile
                         icon={<FolderIcon />}
                         text={"From file"}
-                        onFileUpdate={(decoded, blobUrl, mimeType) => {
-                            props.transcriber.onInputChange();
+                        onFileUpdate={(
+                            decoded,
+                            blobUrl,
+                            mimeType,
+                            filename,
+                        ) => {
+                            props.transcriber.onInputChange(filename);
                             setAudioData({
                                 buffer: decoded,
                                 url: blobUrl,
@@ -270,7 +295,8 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                                 icon={<MicrophoneIcon />}
                                 text={"Record"}
                                 setAudioData={(e) => {
-                                    props.transcriber.onInputChange();
+                                    const filename = `recording_${new Date().toISOString()}`;
+                                    props.transcriber.onInputChange(filename);
                                     setAudioFromRecording(e);
                                 }}
                             />
@@ -327,6 +353,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
     );
 }
 
+// BUG: scrolling doesn't work in Transcript on firefox
 function SettingsTile(props: {
     icon: JSX.Element;
     className?: string;
@@ -369,14 +396,14 @@ function SettingsModal(props: {
 
     const models = {
         // Original checkpoints
-        'Xenova/whisper-tiny': [41, 152],
-        'Xenova/whisper-base': [77, 291],
-        'Xenova/whisper-small': [249],
-        'Xenova/whisper-medium': [776],
+        "Xenova/whisper-tiny": [41, 152],
+        "Xenova/whisper-base": [77, 291],
+        "Xenova/whisper-small": [249],
+        "Xenova/whisper-medium": [776],
 
         // Distil Whisper (English-only)
-        'distil-whisper/distil-medium.en': [402],
-        'distil-whisper/distil-large-v2': [767],
+        "distil-whisper/distil-medium.en": [402],
+        "distil-whisper/distil-large-v2": [767],
     };
     return (
         <Modal
@@ -400,13 +427,16 @@ function SettingsModal(props: {
                                     models[key].length == 2,
                             )
                             .filter(
-                                (key) => (
-                                    !props.transcriber.multilingual || !key.startsWith('distil-whisper/')
-                                )
+                                (key) =>
+                                    !props.transcriber.multilingual ||
+                                    !key.startsWith("distil-whisper/"),
                             )
                             .map((key) => (
                                 <option key={key} value={key}>{`${key}${
-                                    (props.transcriber.multilingual || key.startsWith('distil-whisper/')) ? "" : ".en"
+                                    props.transcriber.multilingual ||
+                                    key.startsWith("distil-whisper/")
+                                        ? ""
+                                        : ".en"
                                 } (${
                                     // @ts-ignore
                                     models[key][
@@ -576,6 +606,7 @@ function FileTile(props: {
         decoded: AudioBuffer,
         blobUrl: string,
         mimeType: string,
+        filename: string,
     ) => void;
 }) {
     // const audioPlayer = useRef<HTMLAudioElement>(null);
@@ -589,21 +620,17 @@ function FileTile(props: {
         if (!files) return;
 
         // Create a blob that we can use as an src for our audio element
+        const filename = files[0].name;
         const urlObj = URL.createObjectURL(files[0]);
         const mimeType = files[0].type;
-
         const reader = new FileReader();
         reader.addEventListener("load", async (e) => {
             const arrayBuffer = e.target?.result as ArrayBuffer; // Get the ArrayBuffer
             if (!arrayBuffer) return;
 
-            const audioCTX = new AudioContext({
-                sampleRate: Constants.SAMPLING_RATE,
-            });
-
             const decoded = await audioCTX.decodeAudioData(arrayBuffer);
 
-            props.onFileUpdate(decoded, urlObj, mimeType);
+            props.onFileUpdate(decoded, urlObj, mimeType, filename);
         });
         reader.readAsArrayBuffer(files[0]);
 

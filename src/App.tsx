@@ -15,7 +15,10 @@ function App() {
                     ML-powered speech recognition directly in your browser
                 </h2>
                 <AudioManager transcriber={transcriber} />
-                <Transcript transcribedData={transcriber.output} />
+                <Transcript
+                    transcribedData={transcriber.output}
+                    filename={transcriber.filename}
+                />
             </div>
 
             <div className='absolute bottom-4'>

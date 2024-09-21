@@ -25,7 +25,9 @@ class PipelineFactory {
                 progress_callback,
 
                 // For medium models, we need to load the `no_attentions` revision to avoid running out of memory
-                revision: this.model.includes("/whisper-medium") ? "no_attentions" : "main"
+                revision: this.model.includes("/whisper-medium")
+                    ? "no_attentions"
+                    : "main",
             });
         }
 
@@ -70,12 +72,11 @@ const transcribe = async (
     subtask,
     language,
 ) => {
-
     const isDistilWhisper = model.startsWith("distil-whisper/");
 
     let modelName = model;
     if (!isDistilWhisper && !multilingual) {
-        modelName += ".en"
+        modelName += ".en";
     }
 
     const p = AutomaticSpeechRecognitionPipelineFactory;
