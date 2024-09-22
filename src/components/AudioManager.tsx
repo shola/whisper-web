@@ -9,6 +9,11 @@ import { Transcriber } from "../hooks/useTranscriber";
 import Progress from "./Progress";
 import AudioRecorder from "./AudioRecorder";
 
+/**
+ * The purpose of this component is to get audio data, read it as an ArrayBuffer,
+ * convert that to an AudioBuffer, and then feed that into the transcriber service.
+ */
+
 function titleCase(str: string) {
     str = str.toLowerCase();
     return (str.match(/\w+.?/g) || [])
@@ -156,9 +161,16 @@ export function AudioManager(props: { transcriber: Transcriber }) {
 
     const isAudioLoading = progress !== undefined;
 
+    const requestAbortController = new AbortController();
+    const [fetchFromUrlInProgress, setFetchFromUrlInProgress] = useState(false);
+
     const resetAudio = () => {
         setAudioData(undefined);
-        setAudioDownloadUrl(undefined);
+        setProgress(0);
+        if (fetchFromUrlInProgress) {
+            requestAbortController.abort();
+            setFetchFromUrlInProgress(false);
+        }
     };
 
     const setAudioFromDownload = async (
@@ -192,7 +204,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
 
     const setAudioFromRecording = async (data: Blob) => {
         resetAudio();
-        setProgress(0);
+
         const blobUrl = URL.createObjectURL(data);
         const fileReader = new FileReader();
         fileReader.onprogress = (event) => {
@@ -212,13 +224,24 @@ export function AudioManager(props: { transcriber: Transcriber }) {
         fileReader.readAsArrayBuffer(data);
     };
 
-    const downloadAudioFromUrl = async (
-        requestAbortController: AbortController,
-    ) => {
-        if (audioDownloadUrl) {
+    const setAudioFromFile = (decoded: AudioBuffer, file: File) => {
+        resetAudio();
+
+        // Create a blob that we can use as an src for our audio element
+        const blobUrl = URL.createObjectURL(file);
+        setAudioData({
+            buffer: decoded,
+            url: blobUrl,
+            source: AudioSource.FILE,
+            mimeType: file.type,
+        });
+    };
+
+    const downloadAudioFromUrl = async (audioDownloadUrl: string) => {
             try {
-                setAudioData(undefined);
-                setProgress(0);
+            resetAudio();
+
+            setFetchFromUrlInProgress(true);
                 const { data, headers } = (await axios.get(audioDownloadUrl, {
                     signal: requestAbortController.signal,
                     responseType: "arraybuffer",
@@ -229,6 +252,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                     data: ArrayBuffer;
                     headers: { "content-type": string };
                 };
+            setFetchFromUrlInProgress(false);
 
                 let mimeType = headers["content-type"];
                 if (!mimeType || mimeType === "audio/wave") {
@@ -239,20 +263,8 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                 console.log("Request failed or aborted", error);
             } finally {
                 setProgress(undefined);
-            }
         }
     };
-
-    // When URL changes, download audio
-    useEffect(() => {
-        if (audioDownloadUrl) {
-            const requestAbortController = new AbortController();
-            downloadAudioFromUrl(requestAbortController);
-            return () => {
-                requestAbortController.abort();
-            };
-        }
-    }, [audioDownloadUrl]);
 
     return (
         <>
@@ -266,26 +278,16 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                                 url.split("/").at(-1) ||
                                 `url_upload_${new Date().toISOString()}`;
                             props.transcriber.onInputChange(filename);
-                            setAudioDownloadUrl(url);
+                            downloadAudioFromUrl(url);
                         }}
                     />
                     <VerticalBar />
                     <FileTile
                         icon={<FolderIcon />}
                         text={"From file"}
-                        onFileUpdate={(
-                            decoded,
-                            blobUrl,
-                            mimeType,
-                            filename,
-                        ) => {
-                            props.transcriber.onInputChange(filename);
-                            setAudioData({
-                                buffer: decoded,
-                                url: blobUrl,
-                                source: AudioSource.FILE,
-                                mimeType: mimeType,
-                            });
+                        onFileUpdate={(decoded, file) => {
+                            props.transcriber.onInputChange(file.name);
+                            setAudioFromFile(decoded, file);
                         }}
                     />
                     {navigator.mediaDevices && (
@@ -602,37 +604,37 @@ function UrlModal(props: {
 function FileTile(props: {
     icon: JSX.Element;
     text: string;
-    onFileUpdate: (
-        decoded: AudioBuffer,
-        blobUrl: string,
-        mimeType: string,
-        filename: string,
-    ) => void;
+    onFileUpdate: (decoded: AudioBuffer, file: File) => void;
 }) {
     // const audioPlayer = useRef<HTMLAudioElement>(null);
 
     // Create hidden input element
     let elem = document.createElement("input");
     elem.type = "file";
+
+    // Clicking the tile triggers invokes this listener that will convert a file into
+    // an AudioBuffer and pass that to onFileUpdate callback
     elem.oninput = (event) => {
         // Make sure we have files to use
         let files = (event.target as HTMLInputElement).files;
         if (!files) return;
 
-        // Create a blob that we can use as an src for our audio element
-        const filename = files[0].name;
-        const urlObj = URL.createObjectURL(files[0]);
-        const mimeType = files[0].type;
+        const file = files[0];
         const reader = new FileReader();
+
         reader.addEventListener("load", async (e) => {
             const arrayBuffer = e.target?.result as ArrayBuffer; // Get the ArrayBuffer
             if (!arrayBuffer) return;
 
+            // Convert ArrayBuffer data into AudioBuffer
             const decoded = await audioCTX.decodeAudioData(arrayBuffer);
 
-            props.onFileUpdate(decoded, urlObj, mimeType, filename);
+            props.onFileUpdate(decoded, file);
         });
-        reader.readAsArrayBuffer(files[0]);
+
+        // Reading a File as an array buffer will trigger a "load" event when done, synonymous with "loadend".
+        // Alternatively, a Blob could be passed to this method.
+        reader.readAsArrayBuffer(file);
 
         // Reset files
         elem.value = "";
