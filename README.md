@@ -32,5 +32,8 @@ https://github.com/xenova/whisper-web/assets/26504141/fb170d84-9678-41b5-9248-a1
 
 ## Extensions/enhancements
 
--   [x] when transcribing, call the transcript the same name as the input file
--   [ ] push a notification when the downloads are ready
+- [x] when transcribing, call the transcript the same name as the input file
+- [ ] push a notification when the downloads are ready
+- [ ] display transcription progress as percentage transcribed
+- [ ] track performance metrics (time to transcribe)
+- [ ] drag/drop files for transcription
