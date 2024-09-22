@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+// QUESTION: will this work with a URL or Recording input too?
 export default function AudioPlayer(props: {
     audioUrl: string;
     mimeType: string;
