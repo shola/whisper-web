@@ -2,6 +2,11 @@ import { useCallback, useMemo, useState } from "react";
 import { useWorker } from "./useWorker";
 import Constants from "../utils/Constants";
 
+type Chunk = {
+    text: string;
+    timestamp: [ number, number | null];
+}
+
 interface ProgressItem {
     file: string;
     loaded: number;
@@ -14,7 +19,7 @@ interface ProgressItem {
 interface TranscriberUpdateData {
     data: [
         string,
-        { chunks: { text: string; timestamp: [number, number | null] }[] },
+        { chunks: Chunk[] },
     ];
     text: string;
 }
@@ -22,14 +27,14 @@ interface TranscriberUpdateData {
 interface TranscriberCompleteData {
     data: {
         text: string;
-        chunks: { text: string; timestamp: [number, number | null] }[];
+        chunks: Chunk[];
     };
 }
 
 export interface TranscriberData {
     isBusy: boolean;
     text: string;
-    chunks: { text: string; timestamp: [number, number | null] }[];
+    chunks: Chunk[];
 }
 
 export interface Transcriber {

@@ -3,6 +3,9 @@ import Transcript from "./components/Transcript";
 import { useTranscriber } from "./hooks/useTranscriber";
 
 function App() {
+    // Question: should the filename live on the transcriber? It's more
+    // like metadata that comes from the audio manager... should I pass a callback
+    // to the audiomanager that updates a filename that is stored in App's state?
     const transcriber = useTranscriber();
 
     return (

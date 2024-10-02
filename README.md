@@ -36,4 +36,4 @@ https://github.com/xenova/whisper-web/assets/26504141/fb170d84-9678-41b5-9248-a1
 - [ ] push a notification when the downloads are ready
 - [ ] display transcription progress as percentage transcribed
 - [ ] track performance metrics (time to transcribe)
-- [ ] drag/drop files for transcription
+- [ ] drag/drop files for transcription (https://developer.mozilla.org/en-US/docs/Web/API/File_API/Using_files_from_web_applications#selecting_files_using_drag_and_drop)
