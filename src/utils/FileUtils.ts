@@ -9,8 +9,7 @@ const saveBlob = (blob: Blob, filename: string) => {
     URL.revokeObjectURL(url);
 };
 
-export const exportTXT = (transcribedData: TranscriberData | undefined) => {
-    const chunks = transcribedData?.chunks ?? [];
+export const exportTXT = (chunks: TranscriberData['chunks']) => {
     const text = chunks
         .map((chunk) => chunk.text)
         .join("")
@@ -20,8 +19,8 @@ export const exportTXT = (transcribedData: TranscriberData | undefined) => {
     saveBlob(blob, "transcript.txt");
 };
 
-export const exportJSON = (transcribedData: TranscriberData | undefined) => {
-    let jsonData = JSON.stringify(transcribedData?.chunks ?? [], null, 2);
+export const exportJSON = (chunks: TranscriberData['chunks']) => {
+    let jsonData = JSON.stringify(chunks, null, 2);
 
     // post-process the JSON to make it more readable
     const regex = /( {4}"timestamp": )\[\s+(\S+)\s+(\S+)\s+\]/gm;

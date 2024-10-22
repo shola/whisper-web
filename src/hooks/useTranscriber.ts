@@ -11,10 +11,12 @@ interface ProgressItem {
     status: string;
 }
 
+export type Chunks = { text: string; timestamp: [number, number | null] }[];
+
 interface TranscriberUpdateData {
     data: {
         text: string;
-        chunks: { text: string; timestamp: [number, number | null] }[];
+        chunks: Chunks;
         tps: number;
     };
 }
@@ -23,7 +25,7 @@ export interface TranscriberData {
     isBusy: boolean;
     tps?: number;
     text: string;
-    chunks: { text: string; timestamp: [number, number | null] }[];
+    chunks: Chunks;
 }
 
 export interface Transcriber {
