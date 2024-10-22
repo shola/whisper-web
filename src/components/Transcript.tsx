@@ -2,12 +2,13 @@ import { useRef, useEffect } from "react";
 
 import { TranscriberData } from "../hooks/useTranscriber";
 import { formatAudioTimestamp } from "../utils/AudioUtils";
+import { exportTXT, exportJSON } from '../utils/FileUtils';
 
 interface Props {
     transcribedData: TranscriberData | undefined;
 }
 
-const useScrollPos = () => {
+const useAutoScroll = () => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // Scroll to the bottom after each render
@@ -31,37 +32,7 @@ const useScrollPos = () => {
 
 // Note: initial code complexity was 24
 export default function Transcript({ transcribedData }: Props) {
-    const scrollRef = useScrollPos();
-
-    const saveBlob = (blob: Blob, filename: string) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        link.click();
-        URL.revokeObjectURL(url);
-    };
-    const exportTXT = () => {
-        const chunks = transcribedData?.chunks ?? [];
-        const text = chunks
-            .map((chunk) => chunk.text)
-            .join("")
-            .trim();
-
-        const blob = new Blob([text], { type: "text/plain" });
-        saveBlob(blob, "transcript.txt");
-    };
-    const exportJSON = () => {
-        let jsonData = JSON.stringify(transcribedData?.chunks ?? [], null, 2);
-
-        // post-process the JSON to make it more readable
-        const regex = /( {4}"timestamp": )\[\s+(\S+)\s+(\S+)\s+\]/gm;
-        jsonData = jsonData.replace(regex, "$1[$2 $3]");
-
-        const blob = new Blob([jsonData], { type: "application/json" });
-        saveBlob(blob, "transcript.json");
-    };
-
+    const scrollRef = useAutoScroll();
 
     return (
         <div
