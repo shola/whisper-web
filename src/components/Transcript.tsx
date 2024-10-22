@@ -7,8 +7,31 @@ interface Props {
     transcribedData: TranscriberData | undefined;
 }
 
+const useScrollPos = () => {
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to the bottom after each render
+    useEffect(() => {
+        if (scrollRef.current) {
+            const diff = Math.abs(
+                scrollRef.current.offsetHeight +
+                    scrollRef.current.scrollTop -
+                    scrollRef.current.scrollHeight,
+            );
+
+            if (diff <= 100) {
+                // We're close enough to the bottom, so scroll to the bottom
+                scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }
+        }
+    });
+
+    return scrollRef;
+}
+
+// Note: initial code complexity was 24
 export default function Transcript({ transcribedData }: Props) {
-    const divRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useScrollPos();
 
     const saveBlob = (blob: Blob, filename: string) => {
         const url = URL.createObjectURL(blob);
@@ -39,25 +62,10 @@ export default function Transcript({ transcribedData }: Props) {
         saveBlob(blob, "transcript.json");
     };
 
-    // Scroll to the bottom when the component updates
-    useEffect(() => {
-        if (divRef.current) {
-            const diff = Math.abs(
-                divRef.current.offsetHeight +
-                    divRef.current.scrollTop -
-                    divRef.current.scrollHeight,
-            );
-
-            if (diff <= 100) {
-                // We're close enough to the bottom, so scroll to the bottom
-                divRef.current.scrollTop = divRef.current.scrollHeight;
-            }
-        }
-    });
 
     return (
         <div
-            ref={divRef}
+            ref={scrollRef}
             className='w-full flex flex-col my-2 p-4 max-h-[20rem] overflow-y-auto'
         >
             {transcribedData?.chunks &&
