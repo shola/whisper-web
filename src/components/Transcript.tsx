@@ -62,13 +62,13 @@ export default function Transcript({ transcribedData }: Props) {
             {transcribedData && !transcribedData.isBusy && (
                 <div className='w-full text-right'>
                     <button
-                        onClick={exportTXT}
+                        onClick={() => exportTXT(transcribedData)}
                         className='text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center mr-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 inline-flex items-center'
                     >
                         Export TXT
                     </button>
                     <button
-                        onClick={exportJSON}
+                        onClick={() => exportJSON(transcribedData)}
                         className='text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center mr-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 inline-flex items-center'
                     >
                         Export JSON
