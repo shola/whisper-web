@@ -31,6 +31,7 @@ interface AudioData {
     mimeType: string;
 }
 
+// TODO: pass filename along for URLs and recordings
 const AudioInputControls = ({
     onInputChange,
     setAudioData,
@@ -38,7 +39,7 @@ const AudioInputControls = ({
     progress,
     audioData,
 }: {
-    onInputChange: () => void;
+    onInputChange: (filename?: string) => void;
     setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
     setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
     progress: number | undefined;
@@ -434,8 +435,11 @@ function UrlModal(props: {
     );
 }
 
+// BUG: changing the uploaded file should clear the transcript. But if a transcription
+// is inflight, the clearing didn't happen. Same is true for adding files from URL, and
+// presumably for recordings too.
 function FileTile(props: {
-    onFileUpdate: () => void;
+    onFileUpdate: (filename: string) => void;
     setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
     setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
 }) {
@@ -450,6 +454,7 @@ function FileTile(props: {
 
         // Create a blob that we can use as an src for our audio element
         const file = files[0];
+        props.onFileUpdate(file.name);
         const blobUrl = URL.createObjectURL(file);
         const mimeType = file.type;
 
@@ -469,8 +474,7 @@ function FileTile(props: {
             });
 
             const decoded = await audioCTX.decodeAudioData(arrayBuffer);
-
-            // TODO: set filename on a ref
+            
             props.setAudioData({
                 buffer: decoded,
                 url: blobUrl,

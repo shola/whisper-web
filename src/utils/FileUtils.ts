@@ -1,4 +1,5 @@
 import { TranscriberData } from "../hooks/useTranscriber";
+import { formatAudioTimestamp } from "./AudioUtils";
 
 /* Used for saving files to client */
 const saveBlob = (blob: Blob, filename: string) => {
@@ -10,17 +11,19 @@ const saveBlob = (blob: Blob, filename: string) => {
     URL.revokeObjectURL(url);
 };
 
-export const exportTXT = (chunks: TranscriberData['chunks']) => {
+export const exportTXT = (filename: string, chunks: TranscriberData['chunks']) => {
     const text = chunks
-        .map((chunk) => chunk.text)
-        .join("")
-        .trim();
+        .map(
+            ({ timestamp, text }) =>
+                `[${formatAudioTimestamp(timestamp[0])}] ${text}`,
+        )
+        .join("\n");
 
     const blob = new Blob([text], { type: "text/plain" });
-    saveBlob(blob, "transcript.txt");
+    saveBlob(blob, filename + ".txt");
 };
 
-export const exportJSON = (chunks: TranscriberData['chunks']) => {
+export const exportJSON = (filename: string, chunks: TranscriberData['chunks']) => {
     let jsonData = JSON.stringify(chunks, null, 2);
 
     // post-process the JSON to make it more readable
@@ -28,5 +31,5 @@ export const exportJSON = (chunks: TranscriberData['chunks']) => {
     jsonData = jsonData.replace(regex, "$1[$2 $3]");
 
     const blob = new Blob([jsonData], { type: "application/json" });
-    saveBlob(blob, "transcript.json");
+    saveBlob(blob, filename + ".json");
 };

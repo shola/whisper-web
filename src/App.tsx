@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { AudioManager } from "./components/AudioManager";
 import Transcript from "./components/Transcript";
 import { useTranscriber } from "./hooks/useTranscriber";
@@ -18,7 +19,7 @@ function App() {
                     ML-powered speech recognition directly in your browser
                 </h2>
                 <AudioManager transcriber={transcriber} />
-                <Transcript transcribedData={transcriber.output} />
+                <Transcript filename={transcriber.filename} transcribedData={transcriber.output} />
             </div>
 
             <div className='absolute bottom-4'>

@@ -6,6 +6,7 @@ import { exportTXT, exportJSON } from "../utils/FileUtils";
 
 interface Props {
     transcribedData: TranscriberData | undefined;
+    filename: string;
 }
 
 const useAutoScroll = () => {
@@ -57,19 +58,20 @@ const TokensPerSecond = ({ tps }: Pick<TranscriberData, "tps">) =>
     );
 
 const ExportButtonGroup = ({
+    filename,
     isBusy,
     chunks,
-}: Pick<TranscriberData, "isBusy" | "chunks">) =>
+}: {filename: string} & Pick<TranscriberData, "isBusy" | "chunks">) =>
     !isBusy ? (
         <div className='w-full text-right'>
             <button
-                onClick={() => exportTXT(chunks)}
+                onClick={() => exportTXT(filename, chunks)}
                 className='text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center mr-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 inline-flex items-center'
             >
                 Export TXT
             </button>
             <button
-                onClick={() => exportJSON(chunks)}
+                onClick={() => exportJSON(filename, chunks)}
                 className='text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 text-center mr-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 inline-flex items-center'
             >
                 Export JSON
@@ -79,7 +81,7 @@ const ExportButtonGroup = ({
         <></>
     );
 
-export default function Transcript({ transcribedData }: Props) {
+export default function Transcript({ transcribedData, filename }: Props) {
     const scrollRef = useAutoScroll();
 
     return (
@@ -95,6 +97,7 @@ export default function Transcript({ transcribedData }: Props) {
                     />
                     <TokensPerSecond tps={transcribedData.tps} />
                     <ExportButtonGroup
+                        filename={filename}
                         isBusy={transcribedData.isBusy}
                         chunks={transcribedData.chunks}
                     />

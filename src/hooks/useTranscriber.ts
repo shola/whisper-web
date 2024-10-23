@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useWorker } from "./useWorker";
 import Constants from "../utils/Constants";
 
@@ -29,7 +29,8 @@ export interface TranscriberData {
 }
 
 export interface Transcriber {
-    onInputChange: () => void;
+    onInputChange: (filename: string) => void;
+    filename: string;
     isBusy: boolean;
     isModelLoading: boolean;
     modelItems: ModelItem[];
@@ -117,9 +118,13 @@ export function useTranscriber(): Transcriber {
     const [language, setLanguage] = useState<string>(
         Constants.DEFAULT_LANGUAGE,
     );
+    const [filename, setFilename] = useState<string>('transcript');
 
-    const onInputChange = useCallback(() => {
+    const onInputChange = useCallback((newFilename: string) => {
+        console.log('reset transcript and set filename to:', filename);
         setTranscript(undefined);
+        // TODO: make all tiles pass a filename to the onInputChange method
+        setFilename(newFilename)
     }, []);
 
     const postRequest = useCallback(
@@ -160,6 +165,7 @@ export function useTranscriber(): Transcriber {
     const transcriber = useMemo(() => {
         return {
             onInputChange,
+            filename,
             isBusy,
             isModelLoading,
             modelItems,
@@ -175,6 +181,8 @@ export function useTranscriber(): Transcriber {
             setLanguage,
         };
     }, [
+        onInputChange,
+        filename,
         isBusy,
         isModelLoading,
         modelItems,
