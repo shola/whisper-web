@@ -140,110 +140,18 @@ export enum AudioSource {
     RECORDING = "RECORDING",
 }
 
+interface AudioData {
+    buffer: AudioBuffer;
+    url: string;
+    source: AudioSource;
+    mimeType: string;
+}
+
 export function AudioManager(props: { transcriber: Transcriber }) {
     const [progress, setProgress] = useState<number | undefined>(0);
-    const [audioData, setAudioData] = useState<
-        | {
-              buffer: AudioBuffer;
-              url: string;
-              source: AudioSource;
-              mimeType: string;
-          }
-        | undefined
-    >(undefined);
-    const [audioDownloadUrl, setAudioDownloadUrl] = useState<
-        string | undefined
-    >(undefined);
-
-    const resetAudio = () => {
-        setAudioData(undefined);
-        setAudioDownloadUrl(undefined);
-    };
-
-    const setAudioFromDownload = async (
-        data: ArrayBuffer,
-        mimeType: string,
-    ) => {
-        const audioCTX = new AudioContext({
-            sampleRate: Constants.SAMPLING_RATE,
-        });
-        const blobUrl = URL.createObjectURL(
-            new Blob([data], { type: "audio/*" }),
-        );
-        const decoded = await audioCTX.decodeAudioData(data);
-        setAudioData({
-            buffer: decoded,
-            url: blobUrl,
-            source: AudioSource.URL,
-            mimeType: mimeType,
-        });
-    };
-
-    const setAudioFromRecording = async (data: Blob) => {
-        resetAudio();
-        setProgress(0);
-        const blobUrl = URL.createObjectURL(data);
-        const fileReader = new FileReader();
-        fileReader.onprogress = (event) => {
-            setProgress(event.loaded / event.total || 0);
-        };
-        fileReader.onloadend = async () => {
-            const audioCTX = new AudioContext({
-                sampleRate: Constants.SAMPLING_RATE,
-            });
-            const arrayBuffer = fileReader.result as ArrayBuffer;
-            const decoded = await audioCTX.decodeAudioData(arrayBuffer);
-            setProgress(undefined);
-            setAudioData({
-                buffer: decoded,
-                url: blobUrl,
-                source: AudioSource.RECORDING,
-                mimeType: data.type,
-            });
-        };
-        fileReader.readAsArrayBuffer(data);
-    };
-
-    const downloadAudioFromUrl = async (
-        requestAbortController: AbortController,
-    ) => {
-        if (audioDownloadUrl) {
-            try {
-                setAudioData(undefined);
-                setProgress(0);
-                const { data, headers } = (await axios.get(audioDownloadUrl, {
-                    signal: requestAbortController.signal,
-                    responseType: "arraybuffer",
-                    onDownloadProgress(progressEvent) {
-                        setProgress(progressEvent.progress || 0);
-                    },
-                })) as {
-                    data: ArrayBuffer;
-                    headers: { "content-type": string };
-                };
-
-                let mimeType = headers["content-type"];
-                if (!mimeType || mimeType === "audio/wave") {
-                    mimeType = "audio/wav";
-                }
-                setAudioFromDownload(data, mimeType);
-            } catch (error) {
-                console.log("Request failed or aborted", error);
-                setProgress(undefined);
-            }
-        }
-    };
-
-    // When URL changes, download audio
-    useEffect(() => {
-        if (audioDownloadUrl) {
-            const requestAbortController = new AbortController();
-            downloadAudioFromUrl(requestAbortController);
-            return () => {
-                requestAbortController.abort();
-            };
-        }
-    }, [audioDownloadUrl]);
+    const [audioData, setAudioData] = useState<AudioData | undefined>(
+        undefined,
+    );
 
     return (
         <>
@@ -252,24 +160,21 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                     <UrlTile
                         icon={<AnchorIcon />}
                         text={"From URL"}
-                        onUrlUpdate={(e) => {
+                        onUrlUpdate={() => {
                             props.transcriber.onInputChange();
-                            setAudioDownloadUrl(e);
                         }}
+                        setAudioData={setAudioData}
+                        setProgress={setProgress}
                     />
                     <VerticalBar />
                     <FileTile
                         icon={<FolderIcon />}
                         text={"From file"}
-                        onFileUpdate={(decoded, blobUrl, mimeType) => {
+                        onFileUpdate={() => {
                             props.transcriber.onInputChange();
-                            setAudioData({
-                                buffer: decoded,
-                                url: blobUrl,
-                                source: AudioSource.FILE,
-                                mimeType: mimeType,
-                            });
                         }}
+                        setAudioData={setAudioData}
+                        setProgress={setProgress}
                     />
                     {navigator.mediaDevices && (
                         <>
@@ -277,10 +182,11 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                             <RecordTile
                                 icon={<MicrophoneIcon />}
                                 text={"Record"}
-                                setAudioData={(e) => {
+                                onRecordingComplete={() => {
                                     props.transcriber.onInputChange();
-                                    setAudioFromRecording(e);
                                 }}
+                                setAudioData={setAudioData}
+                                setProgress={setProgress}
                             />
                         </>
                     )}
@@ -490,12 +396,62 @@ function ProgressBar(props: { progress: string }) {
     );
 }
 
-function UrlTile(props: {
+function UrlTile({
+    icon,
+    text,
+    onUrlUpdate,
+    setAudioData,
+    setProgress,
+}: {
     icon: JSX.Element;
     text: string;
-    onUrlUpdate: (url: string) => void;
+    onUrlUpdate: () => void;
+    setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
+    setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
 }) {
     const [showModal, setShowModal] = useState(false);
+
+    const downloadAudioFromUrl = async (audioDownloadUrl: string) => {
+        try {
+            // Get the file data and response headers
+            const requestAbortController = new AbortController();
+            const { data, headers } = (await axios.get(audioDownloadUrl, {
+                signal: requestAbortController.signal,
+                responseType: "arraybuffer",
+                onDownloadProgress(progressEvent) {
+                    setProgress(progressEvent.progress || 0);
+                },
+            })) as {
+                data: ArrayBuffer;
+                headers: { "content-type": string };
+            };
+
+            // Gather data to set on parent's state
+            let mimeType = headers["content-type"];
+            if (!mimeType || mimeType === "audio/wave") {
+                mimeType = "audio/wav";
+            }
+
+            const audioCTX = new AudioContext({
+                sampleRate: Constants.SAMPLING_RATE,
+            });
+            const blobUrl = URL.createObjectURL(
+                new Blob([data], { type: "audio/*" }),
+            );
+            const decoded = await audioCTX.decodeAudioData(data);
+
+            // Question: should I pass setAudioData along to each of the Tiles so they can call it themselves?
+            setAudioData({
+                buffer: decoded,
+                url: blobUrl,
+                source: AudioSource.URL,
+                mimeType,
+            });
+        } catch (error) {
+            console.log("Request failed or aborted", error);
+            setProgress(undefined);
+        }
+    };
 
     const onClick = () => {
         setShowModal(true);
@@ -506,13 +462,20 @@ function UrlTile(props: {
     };
 
     const onSubmit = (url: string) => {
-        props.onUrlUpdate(url);
+        // Reset parent's state
+        setAudioData(undefined);
+        setProgress(0);
+
+        //this just calls transcriber.onchange now... no need to pass url along
+        onUrlUpdate();
+
+        downloadAudioFromUrl(url);
         onClose();
     };
 
     return (
         <>
-            <Tile icon={props.icon} text={props.text} onClick={onClick} />
+            <Tile icon={icon} text={text} onClick={onClick} />
             <UrlModal show={showModal} onSubmit={onSubmit} onClose={onClose} />
         </>
     );
@@ -553,12 +516,11 @@ function UrlModal(props: {
 function FileTile(props: {
     icon: JSX.Element;
     text: string;
-    onFileUpdate: (
-        decoded: AudioBuffer,
-        blobUrl: string,
-        mimeType: string,
-    ) => void;
+    onFileUpdate: () => void;
+    setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
+    setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
 }) {
+    // TODO: try to track progress like in the rest of the tiles
     // Create hidden input element
     const elem = document.createElement("input");
     elem.type = "file";
@@ -568,10 +530,17 @@ function FileTile(props: {
         if (!files) return;
 
         // Create a blob that we can use as an src for our audio element
-        const urlObj = URL.createObjectURL(files[0]);
+        const blobUrl = URL.createObjectURL(files[0]);
         const mimeType = files[0].type;
 
         const reader = new FileReader();
+        reader.addEventListener('progress', (e) => {
+           if (!e.lengthComputable) {
+                return;
+           }
+           props.setProgress(e.loaded / e.total);
+
+        });
         reader.addEventListener("load", async (e) => {
             const arrayBuffer = e.target?.result as ArrayBuffer; // Get the ArrayBuffer
             if (!arrayBuffer) return;
@@ -582,7 +551,13 @@ function FileTile(props: {
 
             const decoded = await audioCTX.decodeAudioData(arrayBuffer);
 
-            props.onFileUpdate(decoded, urlObj, mimeType);
+            props.onFileUpdate();
+            props.setAudioData({
+                buffer: decoded,
+                url: blobUrl,
+                source: AudioSource.FILE,
+                mimeType,
+            });
         });
         reader.readAsArrayBuffer(files[0]);
 
@@ -599,12 +574,48 @@ function FileTile(props: {
     );
 }
 
-function RecordTile(props: {
+function RecordTile({
+    icon,
+    text,
+    onRecordingComplete,
+    setAudioData,
+    setProgress,
+}: {
     icon: JSX.Element;
     text: string;
-    setAudioData: (data: Blob) => void;
+    onRecordingComplete: () => void;
+    setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
+    setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
 }) {
     const [showModal, setShowModal] = useState(false);
+
+    const setAudioFromRecording = async (data: Blob) => {
+        // Reset parent's state
+        setAudioData(undefined);
+        setProgress(0);
+
+        const fileReader = new FileReader();
+
+        fileReader.onprogress = (event) => {
+            setProgress(event.loaded / event.total || 0);
+        };
+        fileReader.onloadend = async () => {
+            const blobUrl = URL.createObjectURL(data);
+            const audioCTX = new AudioContext({
+                sampleRate: Constants.SAMPLING_RATE,
+            });
+            const arrayBuffer = fileReader.result as ArrayBuffer;
+            const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+
+            setAudioData({
+                buffer: decoded,
+                url: blobUrl,
+                source: AudioSource.RECORDING,
+                mimeType: data.type,
+            });
+        };
+        fileReader.readAsArrayBuffer(data);
+    };
 
     const onClick = () => {
         setShowModal(true);
@@ -616,14 +627,15 @@ function RecordTile(props: {
 
     const onSubmit = (data: Blob | undefined) => {
         if (data) {
-            props.setAudioData(data);
+            onRecordingComplete();
+            setAudioFromRecording(data);
             onClose();
         }
     };
 
     return (
         <>
-            <Tile icon={props.icon} text={props.text} onClick={onClick} />
+            <Tile icon={icon} text={text} onClick={onClick} />
             <RecordModal
                 show={showModal}
                 onSubmit={onSubmit}
@@ -665,6 +677,7 @@ function RecordModal(props: {
                     {"Record audio using your microphone"}
                     <AudioRecorder
                         onRecordingProgress={(blob) => {
+                            // QUESTION: is there a way to set progress as a percentage? is that even necessary?
                             props.onProgress(blob);
                         }}
                         onRecordingComplete={onRecordingComplete}
