@@ -8,7 +8,7 @@ export interface Props {
     submitText?: string;
     submitEnabled?: boolean;
     title: string | JSX.Element;
-    content: string | JSX.Element;
+    children: JSX.Element;
 }
 
 export default function Modal({
@@ -16,7 +16,7 @@ export default function Modal({
     onClose,
     onSubmit,
     title,
-    content,
+    children,
     submitText,
     submitEnabled = true,
 }: Props) {
@@ -54,7 +54,7 @@ export default function Modal({
                                     {title}
                                 </Dialog.Title>
                                 <div className='mt-3 text-sm text-gray-500'>
-                                    {content}
+                                    {children}
                                 </div>
 
                                 <div className='mt-4 flex flex-row-reverse'>

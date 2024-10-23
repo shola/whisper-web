@@ -147,6 +147,54 @@ interface AudioData {
     mimeType: string;
 }
 
+const AudioInputControls = ({
+    onInputChange,
+    setAudioData,
+    setProgress,
+    progress,
+    audioData,
+}: {
+    onInputChange: () => void;
+    setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
+    setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
+    progress: number | undefined;
+    audioData: AudioData | undefined;
+}) => {
+    const isRecordingEnabled = navigator.mediaDevices;
+
+    return (
+        <div className='flex flex-col justify-center items-center rounded-lg bg-white shadow-xl shadow-black/5 ring-1 ring-slate-700/10'>
+            <div className='flex flex-row space-x-2 py-2 w-full px-2'>
+                <UrlTile
+                    onUrlUpdate={onInputChange}
+                    setAudioData={setAudioData}
+                    setProgress={setProgress}
+                />
+                <VerticalBar />
+                <FileTile
+                    onFileUpdate={onInputChange}
+                    setAudioData={setAudioData}
+                    setProgress={setProgress}
+                />
+                {isRecordingEnabled && (
+                    <>
+                        <VerticalBar />
+                        <RecordTile
+                            onRecordingComplete={onInputChange}
+                            setAudioData={setAudioData}
+                            setProgress={setProgress}
+                        />
+                    </>
+                )}
+            </div>
+            <AudioDataLoadingIndicator
+                progress={progress}
+                audioData={audioData}
+            />
+        </div>
+    );
+};
+
 export function AudioManager({ transcriber }: { transcriber: Transcriber }) {
     const [progress, setProgress] = useState<number | undefined>(0);
     const [audioData, setAudioData] = useState<AudioData | undefined>(
@@ -155,32 +203,13 @@ export function AudioManager({ transcriber }: { transcriber: Transcriber }) {
 
     return (
         <>
-            <div className='flex flex-col justify-center items-center rounded-lg bg-white shadow-xl shadow-black/5 ring-1 ring-slate-700/10'>
-                <div className='flex flex-row space-x-2 py-2 w-full px-2'>
-                    <UrlTile
-                        onUrlUpdate={() => transcriber.onInputChange()}
-                        setAudioData={setAudioData}
-                        setProgress={setProgress}
-                    />
-                    <VerticalBar />
-                    <FileTile
-                        onFileUpdate={() => transcriber.onInputChange()}
-                        setAudioData={setAudioData}
-                        setProgress={setProgress}
-                    />
-                    {navigator.mediaDevices && (
-                        <>
-                            <VerticalBar />
-                            <RecordTile
-                                onRecordingComplete={() => transcriber.onInputChange()}
-                                setAudioData={setAudioData}
-                                setProgress={setProgress}
-                            />
-                        </>
-                    )}
-                </div>
-                <AudioDataLoadingIndicator progress={progress} audioData={audioData} />
-            </div>
+            <AudioInputControls
+                onInputChange={transcriber.onInputChange}
+                setAudioData={setAudioData}
+                setProgress={setProgress}
+                progress={progress}
+                audioData={audioData}
+            />
 
             {audioData && (
                 <>
@@ -189,15 +218,14 @@ export function AudioManager({ transcriber }: { transcriber: Transcriber }) {
                         mimeType={audioData.mimeType}
                     />
 
-                    <div className='relative w-full flex justify-center items-center'>
-                        <TranscribeButton
-                            onClick={() => {
-                                transcriber.start(audioData.buffer);
-                            }}
-                            isModelLoading={transcriber.isModelLoading}
-                            isTranscribing={transcriber.isBusy}
-                        />
-                    </div>
+                    <TranscribeButton
+                        onClick={() => {
+                            transcriber.start(audioData.buffer);
+                        }}
+                        isModelLoading={transcriber.isModelLoading}
+                        isTranscribing={transcriber.isBusy}
+                    />
+
                     <ModelItemsProgress modelItems={transcriber.modelItems} />
                 </>
             )}
@@ -210,10 +238,7 @@ export function AudioManager({ transcriber }: { transcriber: Transcriber }) {
     );
 }
 
-function SettingsTile(props: {
-    className?: string;
-    transcriber: Transcriber;
-}) {
+function SettingsTile(props: { className?: string; transcriber: Transcriber }) {
     const [showModal, setShowModal] = useState(false);
 
     const onClick = () => {
@@ -241,105 +266,130 @@ function SettingsTile(props: {
     );
 }
 
-function SettingsModal(props: {
-    show: boolean;
-    onSubmit: (url: string) => void;
-    onClose: () => void;
-    transcriber: Transcriber;
-}) {
-    const names = Object.values(LANGUAGES).map(titleCase);
-
+const ModelSelector = ({ transcriber }: { transcriber: Transcriber }) => {
     const models = MODELS.filter(
         ([key, _value]) =>
-            !props.transcriber.multilingual || !key.includes("/distil-"),
+            !transcriber.multilingual || !key.includes("/distil-"),
     ).map(([key, value]) => ({
         key,
         size: value,
-        id: `${key}${props.transcriber.multilingual || key.includes("/distil-") ? "" : ".en"}`,
+        id: `${key}${transcriber.multilingual || key.includes("/distil-") ? "" : ".en"}`,
     }));
+
+    return (
+        <label>
+            Select the model to use.
+            <select
+                className='mt-1 mb-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+                value={transcriber.model}
+                onChange={(e) => {
+                    transcriber.setModel(e.target.value);
+                }}
+            >
+                {models.map(({ key, id, size }) => (
+                    <option key={key} value={id}>{`${id} (${size}MB)`}</option>
+                ))}
+            </select>
+        </label>
+    );
+};
+
+const MultilingualToggle = ({ transcriber }: { transcriber: Transcriber }) => {
+    return (
+        <div className='flex justify-end items-center mb-3 px-1'>
+            <div className='flex'>
+                <label className='ms-1'>
+                    Multilingual
+                    <input
+                        id='multilingual'
+                        type='checkbox'
+                        checked={transcriber.multilingual}
+                        onChange={(e) => {
+                            let model = Constants.DEFAULT_MODEL;
+                            if (!e.target.checked) {
+                                model += ".en";
+                            }
+                            transcriber.setModel(model);
+                            transcriber.setMultilingual(e.target.checked);
+                        }}
+                    ></input>
+                </label>
+            </div>
+        </div>
+    );
+};
+
+const LanguageSelector = ({ transcriber }: { transcriber: Transcriber }) => {
+    const names = Object.values(LANGUAGES).map(titleCase);
+
+    return (
+        <label>
+            Select the source language.
+            <select
+                className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+                defaultValue={transcriber.language}
+                onChange={(e) => {
+                    transcriber.setLanguage(e.target.value);
+                }}
+            >
+                {Object.keys(LANGUAGES).map((key, i) => (
+                    <option key={key} value={key}>
+                        {names[i]}
+                    </option>
+                ))}
+            </select>
+        </label>
+    );
+};
+
+const TaskSelector = ({ transcriber }: { transcriber: Transcriber }) => (
+    <label>
+        Select the task to perform.
+        <select
+            className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
+            defaultValue={transcriber.subtask}
+            onChange={(e) => {
+                transcriber.setSubtask(e.target.value);
+            }}
+        >
+            <option value={"transcribe"}>Transcribe</option>
+            <option value={"translate"}>Translate (to English)</option>
+        </select>
+    </label>
+);
+
+function SettingsModal({
+    show,
+    onSubmit,
+    onClose,
+    transcriber,
+}: {
+    show: boolean;
+    onSubmit: () => void;
+    onClose: () => void;
+    transcriber: Transcriber;
+}) {
     return (
         <Modal
-            show={props.show}
+            show={show}
             title={"Settings"}
-            content={
-                <>
-                    <label>Select the model to use.</label>
-                    <select
-                        className='mt-1 mb-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
-                        value={props.transcriber.model}
-                        onChange={(e) => {
-                            props.transcriber.setModel(e.target.value);
-                        }}
-                    >
-                        {models.map(({ key, id, size }) => (
-                            <option
-                                key={key}
-                                value={id}
-                            >{`${id} (${size}MB)`}</option>
-                        ))}
-                    </select>
-                    <div className='flex justify-end items-center mb-3 px-1'>
-                        <div className='flex'>
-                            <input
-                                id='multilingual'
-                                type='checkbox'
-                                checked={props.transcriber.multilingual}
-                                onChange={(e) => {
-                                    let model = Constants.DEFAULT_MODEL;
-                                    if (!e.target.checked) {
-                                        model += ".en";
-                                    }
-                                    props.transcriber.setModel(model);
-                                    props.transcriber.setMultilingual(
-                                        e.target.checked,
-                                    );
-                                }}
-                            ></input>
-                            <label htmlFor={"multilingual"} className='ms-1'>
-                                Multilingual
-                            </label>
-                        </div>
-                    </div>
-                    {props.transcriber.multilingual && (
-                        <>
-                            <label>Select the source language.</label>
-                            <select
-                                className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
-                                defaultValue={props.transcriber.language}
-                                onChange={(e) => {
-                                    props.transcriber.setLanguage(
-                                        e.target.value,
-                                    );
-                                }}
-                            >
-                                {Object.keys(LANGUAGES).map((key, i) => (
-                                    <option key={key} value={key}>
-                                        {names[i]}
-                                    </option>
-                                ))}
-                            </select>
-                            <label>Select the task to perform.</label>
-                            <select
-                                className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
-                                defaultValue={props.transcriber.subtask}
-                                onChange={(e) => {
-                                    props.transcriber.setSubtask(
-                                        e.target.value,
-                                    );
-                                }}
-                            >
-                                <option value={"transcribe"}>Transcribe</option>
-                                <option value={"translate"}>
-                                    Translate (to English)
-                                </option>
-                            </select>
-                        </>
-                    )}
-                </>
-            }
-            onClose={props.onClose}
-            onSubmit={() => {}}
-        />
+            onClose={onClose}
+            onSubmit={onSubmit}
+        >
+            <>
+                <ModelSelector transcriber={transcriber} />
+
+                <MultilingualToggle transcriber={transcriber} />
+
+                {transcriber.multilingual && (
+                    <>
+                        <LanguageSelector transcriber={transcriber} />
+
+                        <TaskSelector transcriber={transcriber} />
+                    </>
+                )}
+            </>
+        </Modal>
     );
 }
 
@@ -356,7 +406,8 @@ function AudioDataLoadingIndicator({
 }) {
     const loadingInitiated = progress !== undefined;
     const loadingCompleted = !!audioData;
-    const normalizedProgress = loadingInitiated && loadingCompleted ? 1 : (progress ?? 0);
+    const normalizedProgress =
+        loadingInitiated && loadingCompleted ? 1 : (progress ?? 0);
     const width = `${Math.round(normalizedProgress * 100)}%`;
 
     return (
@@ -369,12 +420,10 @@ function AudioDataLoadingIndicator({
     );
 }
 
-function ModelItemsProgress ({modelItems} : {modelItems: ModelItem[]}) {
+function ModelItemsProgress({ modelItems }: { modelItems: ModelItem[] }) {
     return modelItems.length > 0 ? (
         <div className='relative z-10 p-4 w-full text-center'>
-            <label>
-                Loading model files... (only run once)
-            </label>
+            <label>Loading model files... (only run once)</label>
             {modelItems.map((data) => (
                 <div key={data.file}>
                     <ModelProgress
@@ -384,7 +433,9 @@ function ModelItemsProgress ({modelItems} : {modelItems: ModelItem[]}) {
                 </div>
             ))}
         </div>
-    ) : <></>;
+    ) : (
+        <></>
+    );
 }
 
 function UrlTile({
@@ -487,16 +538,15 @@ function UrlModal(props: {
         <Modal
             show={props.show}
             title={"From URL"}
-            content={
-                <>
-                    {"Enter the URL of the audio file you want to load."}
-                    <UrlInput onChange={onChange} value={url} />
-                </>
-            }
             onClose={props.onClose}
             submitText={"Load"}
             onSubmit={onSubmit}
-        />
+        >
+            <>
+                {"Enter the URL of the audio file you want to load."}
+                <UrlInput onChange={onChange} value={url} />
+            </>
+        </Modal>
     );
 }
 
@@ -652,23 +702,22 @@ function RecordModal(props: {
         <Modal
             show={props.show}
             title={"From Recording"}
-            content={
-                <>
-                    Record audio using your microphone
-                    <AudioRecorder
-                        onRecordingProgress={(blob) => {
-                            // QUESTION: is there a way to set progress as a percentage? is that even necessary?
-                            props.onProgress(blob);
-                        }}
-                        onRecordingComplete={onRecordingComplete}
-                    />
-                </>
-            }
             onClose={onClose}
             submitText={"Load"}
             submitEnabled={audioBlob !== undefined}
             onSubmit={onSubmit}
-        />
+        >
+            <>
+                Record audio using your microphone
+                <AudioRecorder
+                    onRecordingProgress={(blob) => {
+                        // QUESTION: is there a way to set progress as a percentage? is that even necessary?
+                        props.onProgress(blob);
+                    }}
+                    onRecordingComplete={onRecordingComplete}
+                />
+            </>
+        </Modal>
     );
 }
 

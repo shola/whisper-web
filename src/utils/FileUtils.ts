@@ -1,5 +1,6 @@
 import { TranscriberData } from "../hooks/useTranscriber";
 
+/* Used for saving files to client */
 const saveBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
