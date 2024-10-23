@@ -1,4 +1,4 @@
-export default function Progress({
+export default function ModelProgress({
     text,
     percentage,
 }: {

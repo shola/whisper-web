@@ -3,8 +3,12 @@ interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     isTranscribing: boolean;
 }
 
-export function TranscribeButton(props: Props): JSX.Element {
-    const { isModelLoading, isTranscribing, onClick, ...buttonProps } = props;
+export function TranscribeButton({
+    isModelLoading,
+    isTranscribing,
+    onClick,
+    ...buttonProps
+}: Props): JSX.Element {
     return (
         <button
             {...buttonProps}

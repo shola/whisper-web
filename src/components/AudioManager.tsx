@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import Modal from "./modal/Modal";
 import { UrlInput } from "./modal/UrlInput";
 import AudioPlayer from "./AudioPlayer";
 import { TranscribeButton } from "./TranscribeButton";
 import Constants from "../utils/Constants";
-import { Transcriber } from "../hooks/useTranscriber";
-import Progress from "./Progress";
+import { ModelItem, Transcriber } from "../hooks/useTranscriber";
+import ModelProgress from "./ModelProgress";
 import AudioRecorder from "./AudioRecorder";
 
 function titleCase(str: string) {
@@ -147,7 +147,7 @@ interface AudioData {
     mimeType: string;
 }
 
-export function AudioManager(props: { transcriber: Transcriber }) {
+export function AudioManager({ transcriber }: { transcriber: Transcriber }) {
     const [progress, setProgress] = useState<number | undefined>(0);
     const [audioData, setAudioData] = useState<AudioData | undefined>(
         undefined,
@@ -158,21 +158,13 @@ export function AudioManager(props: { transcriber: Transcriber }) {
             <div className='flex flex-col justify-center items-center rounded-lg bg-white shadow-xl shadow-black/5 ring-1 ring-slate-700/10'>
                 <div className='flex flex-row space-x-2 py-2 w-full px-2'>
                     <UrlTile
-                        icon={<AnchorIcon />}
-                        text={"From URL"}
-                        onUrlUpdate={() => {
-                            props.transcriber.onInputChange();
-                        }}
+                        onUrlUpdate={() => transcriber.onInputChange()}
                         setAudioData={setAudioData}
                         setProgress={setProgress}
                     />
                     <VerticalBar />
                     <FileTile
-                        icon={<FolderIcon />}
-                        text={"From file"}
-                        onFileUpdate={() => {
-                            props.transcriber.onInputChange();
-                        }}
+                        onFileUpdate={() => transcriber.onInputChange()}
                         setAudioData={setAudioData}
                         setProgress={setProgress}
                     />
@@ -180,24 +172,14 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                         <>
                             <VerticalBar />
                             <RecordTile
-                                icon={<MicrophoneIcon />}
-                                text={"Record"}
-                                onRecordingComplete={() => {
-                                    props.transcriber.onInputChange();
-                                }}
+                                onRecordingComplete={() => transcriber.onInputChange()}
                                 setAudioData={setAudioData}
                                 setProgress={setProgress}
                             />
                         </>
                     )}
                 </div>
-                <AudioDataBar
-                    progress={
-                        progress !== undefined && audioData
-                            ? 1
-                            : (progress ?? 0)
-                    }
-                />
+                <AudioDataLoadingIndicator progress={progress} audioData={audioData} />
             </div>
 
             {audioData && (
@@ -210,41 +192,25 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                     <div className='relative w-full flex justify-center items-center'>
                         <TranscribeButton
                             onClick={() => {
-                                props.transcriber.start(audioData.buffer);
+                                transcriber.start(audioData.buffer);
                             }}
-                            isModelLoading={props.transcriber.isModelLoading}
-                            isTranscribing={props.transcriber.isBusy}
+                            isModelLoading={transcriber.isModelLoading}
+                            isTranscribing={transcriber.isBusy}
                         />
                     </div>
-                    {props.transcriber.progressItems.length > 0 && (
-                        <div className='relative z-10 p-4 w-full text-center'>
-                            <label>
-                                Loading model files... (only run once)
-                            </label>
-                            {props.transcriber.progressItems.map((data) => (
-                                <div key={data.file}>
-                                    <Progress
-                                        text={data.file}
-                                        percentage={data.progress}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    <ModelItemsProgress modelItems={transcriber.modelItems} />
                 </>
             )}
 
             <SettingsTile
                 className='absolute bottom-4 right-4'
-                transcriber={props.transcriber}
-                icon={<SettingsIcon />}
+                transcriber={transcriber}
             />
         </>
     );
 }
 
 function SettingsTile(props: {
-    icon: JSX.Element;
     className?: string;
     transcriber: Transcriber;
 }) {
@@ -264,7 +230,7 @@ function SettingsTile(props: {
 
     return (
         <div className={props.className}>
-            <Tile icon={props.icon} onClick={onClick} />
+            <Tile icon={<SettingsIcon />} onClick={onClick} />
             <SettingsModal
                 show={showModal}
                 onSubmit={onSubmit}
@@ -381,30 +347,51 @@ function VerticalBar() {
     return <div className='w-[1px] bg-slate-200'></div>;
 }
 
-function AudioDataBar(props: { progress: number }) {
-    return <ProgressBar progress={`${Math.round(props.progress * 100)}%`} />;
-}
+function AudioDataLoadingIndicator({
+    progress,
+    audioData,
+}: {
+    progress?: number;
+    audioData?: AudioData;
+}) {
+    const loadingInitiated = progress !== undefined;
+    const loadingCompleted = !!audioData;
+    const normalizedProgress = loadingInitiated && loadingCompleted ? 1 : (progress ?? 0);
+    const width = `${Math.round(normalizedProgress * 100)}%`;
 
-function ProgressBar(props: { progress: string }) {
     return (
         <div className='w-full rounded-full h-1 bg-gray-200 dark:bg-gray-700'>
             <div
                 className='bg-blue-600 h-1 rounded-full transition-all duration-100'
-                style={{ width: props.progress }}
+                style={{ width }}
             ></div>
         </div>
     );
 }
 
+function ModelItemsProgress ({modelItems} : {modelItems: ModelItem[]}) {
+    return modelItems.length > 0 ? (
+        <div className='relative z-10 p-4 w-full text-center'>
+            <label>
+                Loading model files... (only run once)
+            </label>
+            {modelItems.map((data) => (
+                <div key={data.file}>
+                    <ModelProgress
+                        text={data.file}
+                        percentage={data.progress}
+                    />
+                </div>
+            ))}
+        </div>
+    ) : <></>;
+}
+
 function UrlTile({
-    icon,
-    text,
     onUrlUpdate,
     setAudioData,
     setProgress,
 }: {
-    icon: JSX.Element;
-    text: string;
     onUrlUpdate: () => void;
     setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
     setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
@@ -475,7 +462,7 @@ function UrlTile({
 
     return (
         <>
-            <Tile icon={icon} text={text} onClick={onClick} />
+            <Tile icon={<AnchorIcon />} text={"From URL"} onClick={onClick} />
             <UrlModal show={showModal} onSubmit={onSubmit} onClose={onClose} />
         </>
     );
@@ -514,8 +501,6 @@ function UrlModal(props: {
 }
 
 function FileTile(props: {
-    icon: JSX.Element;
-    text: string;
     onFileUpdate: () => void;
     setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
     setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
@@ -534,12 +519,11 @@ function FileTile(props: {
         const mimeType = files[0].type;
 
         const reader = new FileReader();
-        reader.addEventListener('progress', (e) => {
-           if (!e.lengthComputable) {
+        reader.addEventListener("progress", (e) => {
+            if (!e.lengthComputable) {
                 return;
-           }
-           props.setProgress(e.loaded / e.total);
-
+            }
+            props.setProgress(e.loaded / e.total);
         });
         reader.addEventListener("load", async (e) => {
             const arrayBuffer = e.target?.result as ArrayBuffer; // Get the ArrayBuffer
@@ -567,22 +551,18 @@ function FileTile(props: {
 
     return (
         <Tile
-            icon={props.icon}
-            text={props.text}
+            icon={<FolderIcon />}
+            text={"From file"}
             onClick={() => elem.click()}
         />
     );
 }
 
 function RecordTile({
-    icon,
-    text,
     onRecordingComplete,
     setAudioData,
     setProgress,
 }: {
-    icon: JSX.Element;
-    text: string;
     onRecordingComplete: () => void;
     setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
     setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
@@ -635,7 +615,7 @@ function RecordTile({
 
     return (
         <>
-            <Tile icon={icon} text={text} onClick={onClick} />
+            <Tile icon={<MicrophoneIcon />} text={"Record"} onClick={onClick} />
             <RecordModal
                 show={showModal}
                 onSubmit={onSubmit}
@@ -674,7 +654,7 @@ function RecordModal(props: {
             title={"From Recording"}
             content={
                 <>
-                    {"Record audio using your microphone"}
+                    Record audio using your microphone
                     <AudioRecorder
                         onRecordingProgress={(blob) => {
                             // QUESTION: is there a way to set progress as a percentage? is that even necessary?

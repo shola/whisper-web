@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useWorker } from "./useWorker";
 import Constants from "../utils/Constants";
 
-interface ProgressItem {
+export interface ModelItem {
     file: string;
     loaded: number;
     progress: number;
@@ -32,7 +32,7 @@ export interface Transcriber {
     onInputChange: () => void;
     isBusy: boolean;
     isModelLoading: boolean;
-    progressItems: ProgressItem[];
+    modelItems: ModelItem[];
     start: (audioData: AudioBuffer | undefined) => void;
     output?: TranscriberData;
     model: string;
@@ -52,7 +52,7 @@ export function useTranscriber(): Transcriber {
     const [isBusy, setIsBusy] = useState(false);
     const [isModelLoading, setIsModelLoading] = useState(false);
 
-    const [progressItems, setProgressItems] = useState<ProgressItem[]>([]);
+    const [modelItems, setModelItems] = useState<ModelItem[]>([]);
 
     const webWorker = useWorker((event) => {
         const message = event.data;
@@ -60,7 +60,7 @@ export function useTranscriber(): Transcriber {
         switch (message.status) {
             case "progress":
                 // Model file progress: update one of the progress items.
-                setProgressItems((prev) =>
+                setModelItems((prev) =>
                     prev.map((item) => {
                         if (item.file === message.file) {
                             return { ...item, progress: message.progress };
@@ -85,7 +85,7 @@ export function useTranscriber(): Transcriber {
             case "initiate":
                 // Model file start load: add a new progress item to the list.
                 setIsModelLoading(true);
-                setProgressItems((prev) => [...prev, message]);
+                setModelItems((prev) => [...prev, message]);
                 break;
             case "ready":
                 setIsModelLoading(false);
@@ -98,7 +98,7 @@ export function useTranscriber(): Transcriber {
                 break;
             case "done":
                 // Model file loaded: remove the progress item from the list.
-                setProgressItems((prev) =>
+                setModelItems((prev) =>
                     prev.filter((item) => item.file !== message.file),
                 );
                 break;
@@ -162,7 +162,7 @@ export function useTranscriber(): Transcriber {
             onInputChange,
             isBusy,
             isModelLoading,
-            progressItems,
+            modelItems,
             start: postRequest,
             output: transcript,
             model,
@@ -177,7 +177,7 @@ export function useTranscriber(): Transcriber {
     }, [
         isBusy,
         isModelLoading,
-        progressItems,
+        modelItems,
         postRequest,
         transcript,
         model,
