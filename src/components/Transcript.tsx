@@ -83,6 +83,11 @@ const ExportButtonGroup = ({
 
 export default function Transcript({ transcribedData, filename }: Props) {
     const scrollRef = useAutoScroll();
+     
+    // CONVENIENCE: auto-download transcript text file
+    if (transcribedData && !transcribedData.isBusy && transcribedData.chunks.length) {
+        exportTXT(filename, transcribedData.chunks);
+    }
 
     return (
         <div
