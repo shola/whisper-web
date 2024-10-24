@@ -39,7 +39,7 @@ const AudioInputControls = ({
     progress,
     audioData,
 }: {
-    onInputChange: (filename?: string) => void;
+    onInputChange: (filename: string) => void;
     setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
     setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
     progress: number | undefined;
@@ -446,7 +446,14 @@ function FileTile(props: {
     // TODO: try to track progress like in the rest of the tiles
     // Create hidden input element
     const elem = document.createElement("input");
+    // FEAT: open a dir (sequentially transcribe ALL files) or file
+    // TODO: see what happens if you try to transcribe a non-audio file
+    elem.multiple = false;
     elem.type = "file";
+
+    // Logged error: `An error occurred: "Session already 
+    // started". Please file a bug report.`
+
     elem.oninput = (event) => {
         // Make sure we have files to use
         const files = (event.target as HTMLInputElement).files;
@@ -454,6 +461,17 @@ function FileTile(props: {
 
         // Create a blob that we can use as an src for our audio element
         const file = files[0];
+        // TODO: call helper for every file; ignoring all failures.
+        // Array.from(files).forEach((file) => readSetAudioFromFile(file))
+
+        readSetAudioFromFile(file);
+        // Reset files
+        elem.value = "";
+    };
+
+    function readSetAudioFromFile(file: File) {
+        // TODO: once this loops through multiple files, 
+        // verify that this processes files sequentially
         props.onFileUpdate(file.name);
         const blobUrl = URL.createObjectURL(file);
         const mimeType = file.type;
@@ -483,9 +501,6 @@ function FileTile(props: {
             });
         });
         reader.readAsArrayBuffer(file);
-
-        // Reset files
-        elem.value = "";
     };
 
     return (
