@@ -1,25 +1,29 @@
-# Whisper Web
+# Whisper Web (w/webGPU)
 
-ML-powered speech recognition directly in your browser! Built with [🤗 Transformers.js](https://github.com/xenova/transformers.js).
-
-Check out the demo site [here](https://huggingface.co/spaces/Xenova/whisper-webgpu).
-
-https://github.com/xenova/whisper-web/assets/26504141/5d6ed3d9-5f99-4d89-8e38-9d4fc8d5baaf
+Forked to add a few conveniences:
+- [x] use webGPU for transcription by default
+- [x] use the `whisper-large-v3-turbo` model by default
+- [x] name downloaded transcript with the same name as the input file (instead of transcript.txt)
+- [x] automatically download a text file transcript when transcription is complete
+- [ ] add drag and drop for input file uploads
+- [ ] add more performance metrics for transcription
+- [ ] refactor UI components to make them easier (imho) to understand, a-la [clean code's recommendations
+for functions](https://gist.github.com/wojteklu/73c6914cc446146b8b533c0988cf8d29#functions-rules) 
 
 ## Running locally
 
 1. Clone the repo and install dependencies:
 
     ```bash
-    git clone https://github.com/xenova/whisper-web.git
+    git clone https://github.com/shola/whisper-web.git
     cd whisper-web
-    npm install
+    pnpm install  #optional, `npm` will work just fine
     ```
 
 2. Run the development server:
 
     ```bash
-    npm run dev
+    pnpm run dev
     ```
     > Firefox users need to change the `dom.workers.modules.enabled` setting in `about:config` to `true` to enable Web Workers.
     > Check out [this issue](https://github.com/xenova/whisper-web/issues/8) for more details.
