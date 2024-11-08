@@ -5,6 +5,9 @@ Forked to add a few conveniences:
 - [x] use the `whisper-large-v3-turbo` model by default
 - [x] name downloaded transcript with the same name as the input file (instead of transcript.txt)
 - [x] automatically download a text file transcript when transcription is complete
+- [x] downloaded text files will have a timestamp for each transcribed chunk of audio data
+(instead of a massive single paragraph of text)
+- [ ] verify that the models get cached
 - [ ] add drag and drop for input file uploads
 - [ ] add more performance metrics for transcription
 - [ ] refactor UI components to make them easier (imho) to understand, a-la [clean code's recommendations
