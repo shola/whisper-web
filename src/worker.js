@@ -8,11 +8,6 @@ class PipelineFactory {
     static model = null;
     static instance = null;
 
-    constructor(tokenizer, model) {
-        this.tokenizer = tokenizer;
-        this.model = model;
-    }
-
     static async getInstance(progress_callback = null) {
         if (this.instance === null) {
             this.instance = pipeline(this.task, this.model, {
@@ -71,12 +66,8 @@ const transcribe = async ({ audio, model, subtask, language }) => {
         self.postMessage(data);
     });
 
-    const time_precision =
-        transcriber.processor.feature_extractor.config.chunk_length /
-        transcriber.model.config.max_source_positions;
-
     // Storage for chunks to be processed. Initialise with an empty chunk.
-    /** @type {{ text: string; offset: number, timestamp: [number, number | null] }[]} */
+    /** @type {{ text: string; timestamp: [number, number | null] }[]} */
     const chunks = [];
 
     // TODO: Storage for fully-processed and merged chunks
@@ -90,14 +81,11 @@ const transcribe = async ({ audio, model, subtask, language }) => {
     let num_tokens = 0;
     let tps;
     const streamer = new WhisperTextStreamer(transcriber.tokenizer, {
-        time_precision,
         on_chunk_start: (x) => {
             const offset = (chunk_length_s - stride_length_s) * chunk_count;
             chunks.push({
                 text: "",
-                timestamp: [offset + x, null],
-                finalised: false,
-                offset,
+                timestamp: [offset + x, offset],
             });
         },
         token_callback_function: (x) => {
@@ -122,8 +110,7 @@ const transcribe = async ({ audio, model, subtask, language }) => {
         },
         on_chunk_end: (x) => {
             const current = chunks.at(-1);
-            current.timestamp[1] = x + current.offset;
-            current.finalised = true;
+            current.timestamp[1] += x;
         },
         on_finalize: () => {
             start_time = null;
