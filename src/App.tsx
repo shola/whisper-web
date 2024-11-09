@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { AudioManager } from "./components/AudioManager";
 import Transcript from "./components/Transcript";
 import { useTranscriber } from "./hooks/useTranscriber";

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useWorker } from "./useWorker";
 import Constants from "../utils/Constants";
 
@@ -149,13 +149,14 @@ export function useTranscriber(): Transcriber {
                     audio = audioData.getChannelData(0);
                 }
 
+                // NOTE: undefined is the default value instead of null to
+                // be consistent with the types from transformers.js
                 webWorker.postMessage({
                     audio,
                     model,
-                    multilingual,
-                    subtask: multilingual ? subtask : null,
+                    subtask: multilingual ? subtask : undefined,
                     language:
-                        multilingual && language !== "auto" ? language : null,
+                        multilingual && language !== "auto" ? language : undefined,
                 });
             }
         },

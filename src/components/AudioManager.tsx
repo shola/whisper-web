@@ -328,7 +328,7 @@ function UrlTile({
     setAudioData,
     setProgress,
 }: {
-    onUrlUpdate: () => void;
+    onUrlUpdate: (newFilename: string) => void;
     setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
     setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
 }) {
@@ -389,8 +389,8 @@ function UrlTile({
         setAudioData(undefined);
         setProgress(0);
 
-        //this just calls transcriber.onchange now... no need to pass url along
-        onUrlUpdate();
+        const newFilename = url.split('/').at(-1) ?? `url_download_${new Date().toLocaleDateString()}`;
+        onUrlUpdate(newFilename);
 
         downloadAudioFromUrl(url);
         onClose();
@@ -517,7 +517,7 @@ function RecordTile({
     setAudioData,
     setProgress,
 }: {
-    onRecordingComplete: () => void;
+    onRecordingComplete: (newFilename: string) => void;
     setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
     setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
 }) {
@@ -561,7 +561,8 @@ function RecordTile({
 
     const onSubmit = (data: Blob | undefined) => {
         if (data) {
-            onRecordingComplete();
+            const newFilename = `voice_recording_${new Date().toLocaleDateString()}`;
+            onRecordingComplete(newFilename);
             setAudioFromRecording(data);
             onClose();
         }

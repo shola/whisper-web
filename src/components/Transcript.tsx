@@ -61,7 +61,7 @@ const ExportButtonGroup = ({
     filename,
     isBusy,
     chunks,
-}: {filename: string} & Pick<TranscriberData, "isBusy" | "chunks">) =>
+}: { filename: string } & Pick<TranscriberData, "isBusy" | "chunks">) =>
     !isBusy ? (
         <div className='w-full text-right'>
             <button
@@ -85,7 +85,11 @@ export default function Transcript({ transcribedData, filename }: Props) {
     const scrollRef = useAutoScroll();
      
     // CONVENIENCE: auto-download transcript text file
-    if (transcribedData && !transcribedData.isBusy && transcribedData.chunks.length) {
+    if (
+        transcribedData &&
+        !transcribedData.isBusy &&
+        transcribedData.chunks.length
+    ) {
         exportTXT(filename, transcribedData.chunks);
     }
 
