@@ -86,8 +86,71 @@ export function AudioManager({ transcriber }: { transcriber: Transcriber }) {
         undefined,
     );
 
+    // TODO: re-use this in its original place, FileTile.
+    function readSetAudioFromFile(file: File) {
+        // TODO: once this loops through multiple files, 
+        // verify that this processes files sequentially
+        transcriber.onInputChange(file.name);
+        const blobUrl = URL.createObjectURL(file);
+        const mimeType = file.type;
+
+        const reader = new FileReader();
+        reader.addEventListener("progress", (e) => {
+            if (!e.lengthComputable) {
+                return;
+            }
+            setProgress(e.loaded / e.total);
+        });
+        reader.addEventListener("load", async (e) => {
+            const arrayBuffer = e.target?.result as ArrayBuffer; // Get the ArrayBuffer
+            if (!arrayBuffer) return;
+
+            const audioCTX = new AudioContext({
+                sampleRate: Constants.SAMPLING_RATE,
+            });
+
+            const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+            
+            setAudioData({
+                buffer: decoded,
+                url: blobUrl,
+                source: AudioSource.FILE,
+                mimeType,
+            });
+        });
+        reader.readAsArrayBuffer(file);
+    };
+
     return (
-        <>
+        <div 
+        onDropCapture={(ev) => {
+            // This seems less standardized than onDrop, so just ignore it.
+            ev.preventDefault();
+            // Get the id of the target and add the moved element to the target's DOM
+
+            // const file = ev.dataTransfer.files[0];
+            // readSetAudioFromFile(file)
+            // debugger
+            
+        }}
+        onDrop={(ev) => {
+            ev.preventDefault();
+            // TODO: check if ev.dataTransfer.items returns anything when I drag and drop from voice memos
+            const file = ev.dataTransfer.files[0];
+            console.log('are there any items?', ev.dataTransfer.items);
+            readSetAudioFromFile(file)            
+        }} 
+        onDragEnter={(ev) => {
+            // TODO: debounce
+            ev.preventDefault();
+
+        }} 
+        onDragOver={(ev) => {
+            // TODO: debounce
+            ev.preventDefault();
+
+        }} 
+        >
             <AudioInputControls
                 onInputChange={transcriber.onInputChange}
                 setAudioData={setAudioData}
@@ -119,7 +182,7 @@ export function AudioManager({ transcriber }: { transcriber: Transcriber }) {
                 className='absolute bottom-4 right-4'
                 transcriber={transcriber}
             />
-        </>
+        </div>
     );
 }
 
@@ -438,7 +501,7 @@ function UrlModal(props: {
 // BUG: changing the uploaded file should clear the transcript. But if a transcription
 // is inflight, the clearing didn't happen. Same is true for adding files from URL, and
 // presumably for recordings too.
-function FileTile(props: {
+function FileTile({onFileUpdate, setAudioData, setProgress}: {
     onFileUpdate: (filename: string) => void;
     setAudioData: React.Dispatch<React.SetStateAction<AudioData | undefined>>;
     setProgress: React.Dispatch<React.SetStateAction<number | undefined>>;
@@ -461,6 +524,7 @@ function FileTile(props: {
 
         // Create a blob that we can use as an src for our audio element
         const file = files[0];
+        debugger
         // TODO: call helper for every file; ignoring all failures.
         // Array.from(files).forEach((file) => readSetAudioFromFile(file))
 
@@ -472,7 +536,7 @@ function FileTile(props: {
     function readSetAudioFromFile(file: File) {
         // TODO: once this loops through multiple files, 
         // verify that this processes files sequentially
-        props.onFileUpdate(file.name);
+        onFileUpdate(file.name);
         const blobUrl = URL.createObjectURL(file);
         const mimeType = file.type;
 
@@ -481,7 +545,7 @@ function FileTile(props: {
             if (!e.lengthComputable) {
                 return;
             }
-            props.setProgress(e.loaded / e.total);
+            setProgress(e.loaded / e.total);
         });
         reader.addEventListener("load", async (e) => {
             const arrayBuffer = e.target?.result as ArrayBuffer; // Get the ArrayBuffer
@@ -493,7 +557,7 @@ function FileTile(props: {
 
             const decoded = await audioCTX.decodeAudioData(arrayBuffer);
             
-            props.setAudioData({
+            setAudioData({
                 buffer: decoded,
                 url: blobUrl,
                 source: AudioSource.FILE,
