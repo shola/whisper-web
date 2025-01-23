@@ -5,9 +5,7 @@ Forked to add a few conveniences:
 -   [x] Clicking "Export TEXT" adds basic grammar, punctuation, and breaks text into paragraphs
 -   [x] Clicking "Export TEXT" saves transcripts with a name that is generated from transcript content
 
-<video width="640" height="480" controls>
-  <source src="./private/whisper_web_webgpu_ollamajs.mov" type="video/mp4">
-</video>
+https://github.com/user-attachments/assets/4fe64d2f-ff10-4ee6-b9b4-83e149dc9a14
 
 ## Running locally
 
