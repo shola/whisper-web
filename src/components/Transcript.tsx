@@ -1,7 +1,9 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 
 import { TranscriberData } from "../hooks/useTranscriber";
 import { formatAudioTimestamp } from "../utils/AudioUtils";
+import { grammarize, useOllamaAvailability } from "../utils/grammarize";
+import { Spinner } from "./TranscribeButton";
 
 interface Props {
     transcribedData: TranscriberData | undefined;
@@ -9,6 +11,8 @@ interface Props {
 
 export default function Transcript({ transcribedData }: Props) {
     const divRef = useRef<HTMLDivElement>(null);
+    const [isGrammarizing, setIsGrammarizing] = useState(false);
+    const ollamaAvailable = useOllamaAvailability();
 
     const saveBlob = (blob: Blob, filename: string) => {
         const url = URL.createObjectURL(blob);
@@ -18,15 +22,22 @@ export default function Transcript({ transcribedData }: Props) {
         link.click();
         URL.revokeObjectURL(url);
     };
-    const exportTXT = () => {
-        let chunks = transcribedData?.chunks ?? [];
+    const exportTXT = async (doGrammarization = false) => {
+        let title = "transcript.txt";
+        const chunks = transcribedData?.chunks ?? [];
         let text = chunks
             .map((chunk) => chunk.text)
             .join("")
             .trim();
-
+        if (doGrammarization) {
+            setIsGrammarizing(true);
+            const response = await grammarize(text);
+            setIsGrammarizing(false);
+            text = response.text ?? text;
+            title = response.title ?? title;
+        }
         const blob = new Blob([text], { type: "text/plain" });
-        saveBlob(blob, "transcript.txt");
+        saveBlob(blob, title);
     };
     const exportJSON = () => {
         let jsonData = JSON.stringify(transcribedData?.chunks ?? [], null, 2);

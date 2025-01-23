@@ -1,9 +1,11 @@
 import { AudioManager } from "./components/AudioManager";
 import Transcript from "./components/Transcript";
 import { useTranscriber } from "./hooks/useTranscriber";
+import { useOllamaAvailability } from "./utils/grammarize";
 
 function App() {
     const transcriber = useTranscriber();
+    const ollamaAvailable = useOllamaAvailability();
 
     return (
         <div className='flex justify-center items-center min-h-screen'>
@@ -25,7 +27,24 @@ function App() {
                     href='https://github.com/xenova/transformers.js'
                 >
                     🤗 Transformers.js
-                </a>
+                </a>{" "}
+                {ollamaAvailable && (
+                    <span>
+                        {" "}
+                        and{" "}
+                        <a
+                            className='underline'
+                            href='https://github.com/ollama/ollama-js/'
+                        >
+                            <img
+                                className='inline-block align-text-top'
+                                src='https://ollama.com/public/icon-16x16.png'
+                                alt='Ollama'
+                            />
+                            Ollama.js
+                        </a>
+                    </span>
+                )}
             </div>
         </div>
     );
