@@ -85,7 +85,7 @@ async function getGenTitle(
             messages: [
                 {
                     role: "user",
-                    content: `Create a lowercased, snake cased title that is under 50 characters, and append ".txt": ${text}`,
+                    content: `Create a lowercased, snake cased title that is under 50 characters, and has no special characters. Append ".txt" to that filename: ${text}`,
                 },
             ],
         });
