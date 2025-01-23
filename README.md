@@ -5,7 +5,7 @@ Forked to add a few conveniences:
 -   [x] Clicking "Export TEXT" adds basic grammar, punctuation, and breaks text into paragraphs
 -   [x] Clicking "Export TEXT" saves transcripts with a name that is generated from transcript content
 
-If you are unable to setup webGPU in your browser, try this CPU-only branch: [main-ollamajs](https://github.com/shola/whisper-web/tree/main-ollamajs)
+*If you are unable to setup webGPU in your browser, try this CPU-only branch: [main-ollamajs](https://github.com/shola/whisper-web/tree/main-ollamajs)*
 
 https://github.com/user-attachments/assets/4fe64d2f-ff10-4ee6-b9b4-83e149dc9a14
 
