@@ -6,7 +6,7 @@ Forked to add a few conveniences:
 -   [x] Clicking "Export TEXT" saves transcripts with a name that is generated from transcript content
 
 <video width="640" height="480" controls>
-  <source src="./private/whisper_web_webgpu_ollamajs_720.mov" type="video/mp4">
+  <source src="./private/whisper_web_webgpu_ollamajs.mov" type="video/mp4">
 </video>
 
 ## Running locally
