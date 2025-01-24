@@ -5,7 +5,7 @@ Forked to add a few conveniences:
 -   [x] Clicking "Export TEXT" adds basic grammar, punctuation, and breaks text into paragraphs
 -   [x] Clicking "Export TEXT" saves transcripts with a name that is generated from transcript content
 
-*If you are unable to setup webGPU in your browser, try this CPU-only branch: [main-ollamajs](https://github.com/shola/whisper-web/tree/main-ollamajs)*
+_If you are unable to setup webGPU in your browser, try this CPU-only branch: [main-ollamajs](https://github.com/shola/whisper-web/tree/main-ollamajs)_
 
 https://github.com/user-attachments/assets/4fe64d2f-ff10-4ee6-b9b4-83e149dc9a14
 
@@ -53,3 +53,19 @@ As I would have liked to do in those normal papers, I also wanted to follow this
 
 So, I decided to adjust my approach. Instead of starting immediately at full speed, I planned to start light and gradually increase the intensity as the semester progressed. This would allow me to make steady progress without feeling overwhelmed by the sheer size of the task ahead.
 ```
+
+### Optional setup for Mac users who have Voice Memos
+
+It's possible to get access to your "Voice Memos" directory as a mac user by taking the following steps.
+
+It may be necessary to grant your terminal full file system access:
+System Settings -> Privacy & Security -> Full Disk Access -> Click the toggle for your terminal program.
+
+-   create a symlink from your recordings directory to your home
+
+```bash
+ln -s "/Users/USER_NAME/Library/Group Containers/group.com.apple.VoiceMemos.shared/Recordings" ~/Recordings
+```
+
+When you try to load a file into whisper by clicking the "From file" tile, you should now see the "Recordings" directory in your home dir.
+Open it, and select any of the ".m4a" files to transcribe.
