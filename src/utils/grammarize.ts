@@ -63,9 +63,17 @@ async function getGrammarizedText(
             messages: [
                 {
                     role: "user",
-                    content: `Do not add/delete/modify the input text. Add correct punctuation, and break up the text into paragraphs. Here is the input text: ${text}`,
+                    content: `You are a dictation app whose job is to faithfully present the following text to the user, with a few changes (below): ${text}
+                    
+                    1) Break the input text up into paragraphs and add punctuation.
+
+                    2) DO NOT add any additional text, only break the input text into paragraphs.
+                    `,
                 },
             ],
+            options: {
+                temperature: 0,
+            },
         });
 
         return grammarizedTextResponse.message.content;
@@ -85,12 +93,31 @@ async function getGenTitle(
             messages: [
                 {
                     role: "user",
-                    content: `Create a lowercased, snake cased title that is under 50 characters, and append ".txt": ${text}`,
+                    content: `You are a robot. Here is the input text: ${text}.
+                    `,
                 },
             ],
+            format: {
+                type: "object",
+                properties: {
+                    date: {
+                        type: "string",
+                    },
+                    file_description: {
+                        type: "string",
+                    },
+                },
+                required: ["date", "file_description"],
+            },
+            options: {
+                temperature: 0,
+            },
         });
+        const todaysDate = new Date().toLocaleDateString().replace(/\//g, "_");
+        const { date = todaysDate, file_description = "transcript" } =
+            JSON.parse(genTitleResponse.message.content);
 
-        return genTitleResponse.message.content;
+        return `${date}_${file_description.toLowerCase().replaceAll(" ", "_")}.txt`;
     } catch (error) {
         console.error("Error: title generation failed! ", error);
         return null;
