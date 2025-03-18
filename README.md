@@ -1,5 +1,7 @@
 # Whisper Web (with webGPU and ollamajs)
 
+## Not actively developed. Known issue where grammarizing is broken.
+
 Forked to add a few conveniences:
 
 -   [x] Clicking "Export TEXT" adds basic grammar, punctuation, and breaks text into paragraphs
